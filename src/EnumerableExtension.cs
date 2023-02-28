@@ -27,7 +27,7 @@ public static class EnumerableExtension
         if (enumerable == null)
             return true;
 
-        return None(enumerable);
+        return Empty(enumerable);
     }
 
     /// <summary>
@@ -42,11 +42,11 @@ public static class EnumerableExtension
 
     /// <summary>
     /// Determines whether the collection is empty <para></para>
-    /// Assumes collection is non-null!
+    /// Assumes collection is non-null, will throw if it is. <see cref="IsNullOrEmpty{T}"/> for more safety.
     /// </summary>
     /// <exception cref="ArgumentNullException"></exception>
     [Pure]
-    public static bool None<T>(this IEnumerable<T> enumerable)
+    public static bool Empty<T>(this IEnumerable<T> enumerable)
     {
         if (enumerable == null)
             throw new ArgumentNullException(nameof(enumerable));
