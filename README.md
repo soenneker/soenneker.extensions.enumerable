@@ -1,5 +1,5 @@
 [![](https://img.shields.io/nuget/v/Soenneker.Extensions.Enumerable.svg?style=for-the-badge)](https://www.nuget.org/packages/Soenneker.Extensions.Enumerable/)
-[![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.extensions.enumerable/main.yml?style=for-the-badge)](https://github.com/soenneker/soenneker.extensions.enumerable/actions/workflows/main.yml)
+[![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.extensions.enumerable/publish.yml?style=for-the-badge)](https://github.com/soenneker/soenneker.extensions.enumerable/actions/workflows/publish.yml)
 [![](https://img.shields.io/nuget/dt/Soenneker.Extensions.Enumerable.svg?style=for-the-badge)](https://www.nuget.org/packages/Soenneker.Extensions.Enumerable/)
 
 # Soenneker.Extensions.Enumerable
