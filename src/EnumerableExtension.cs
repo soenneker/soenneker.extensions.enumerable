@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Soenneker.Utils.Random;
 
 namespace Soenneker.Extensions.Enumerable;
 
@@ -70,6 +71,19 @@ public static class EnumerableExtension
         var hashSet = new HashSet<T>(enumerable);
 
         return hashSet;
+    }
+
+    /// <summary>
+    /// Preferably you should use the List extension if you have a list.
+    /// </summary>
+    [Pure]
+    public static T GetRandom<T>(this IEnumerable<T> enumerable)
+    {
+        int count = enumerable.Count();
+        int index = RandomUtil.Next(0, count);
+
+        T result = enumerable.ElementAt(index);
+        return result;
     }
 
     /// <summary>
