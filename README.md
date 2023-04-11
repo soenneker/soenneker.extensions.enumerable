@@ -2,7 +2,7 @@
 [![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.extensions.enumerable/publish.yml?style=for-the-badge)](https://github.com/soenneker/soenneker.extensions.enumerable/actions/workflows/publish.yml)
 [![](https://img.shields.io/nuget/dt/Soenneker.Extensions.Enumerable.svg?style=for-the-badge)](https://www.nuget.org/packages/Soenneker.Extensions.Enumerable/)
 
-# Soenneker.Extensions.Enumerable
+# ![](https://user-images.githubusercontent.com/4441470/224455560-91ed3ee7-f510-4041-a8d2-3fc093025112.png) Soenneker.Extensions.Enumerable
 ### A collection of helpful enumerable extension methods
 
 ## Installation
