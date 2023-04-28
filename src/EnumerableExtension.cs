@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using Soenneker.Utils.Random;
 
 namespace Soenneker.Extensions.Enumerable;
@@ -30,6 +31,7 @@ public static class EnumerableExtension
 
         return Empty(enumerable);
     }
+
 
     /// <summary>
     /// Shorthand for <see cref="IsNullOrEmpty{T}"/> == false.
@@ -103,6 +105,22 @@ public static class EnumerableExtension
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Iterates through the async enumerable, awaiting
+    /// </summary>
+    [Pure]
+    public static async ValueTask<List<T>> ToList<T>(this IAsyncEnumerable<T> enumerable)
+    {
+        var result = new List<T>();
+
+        await foreach (T item in enumerable)
+        {
+            result.Add(item);
+        }
+
+        return result;
     }
 
     /// <summary>
