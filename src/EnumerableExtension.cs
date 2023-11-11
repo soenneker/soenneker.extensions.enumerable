@@ -124,11 +124,11 @@ public static class EnumerableExtension
     }
 
     [Pure]
-    [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
-    public static IEnumerable<T> RemoveNulls<T>(this IEnumerable<T> source)
+    [return: NotNullIfNotNull("source")]
+    public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T>? source)
     {
-        if (source.IsNullOrEmpty())
-            return source;
+        if (source == null)
+            return null;
 
         return RemoveNullsInternal(source);
     }
