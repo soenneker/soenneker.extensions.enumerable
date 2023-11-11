@@ -24,4 +24,13 @@ public class EnumerableExtensionTests
         string value = test.GetRandom();
         value.Should().NotBeNull();
     }
+
+    [Fact]
+    public void RemoveNulls_should_remove_nulls()
+    {
+        var test = new[] { "a", null, "b" };
+
+        IEnumerable<string?> value = test.RemoveNulls();
+        value.Count().Should().Be(2);
+    }
 }

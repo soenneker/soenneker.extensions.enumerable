@@ -123,6 +123,13 @@ public static class EnumerableExtension
         return result;
     }
 
+    [Pure]
+    public static IEnumerable<T> RemoveNulls<T>(this IEnumerable<T> source)
+    {
+        IEnumerable<T> result = source.Where(item => item != null);
+        return result;
+    }
+
     /// <summary>
     /// Flattens and returns a collection of recursive children. Preserves underlying references even though it's a new list.
     /// </summary>
