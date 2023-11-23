@@ -79,8 +79,11 @@ public static class EnumerableExtension
     /// Preferably you should use the List extension if you have a list.
     /// </summary>
     [Pure]
-    public static T GetRandom<T>(this IEnumerable<T> enumerable)
+    public static T? GetRandom<T>(this IEnumerable<T>? enumerable)
     {
+        if (enumerable.IsNullOrEmpty())
+            return default;
+
         int count = enumerable.Count();
         int index = RandomUtil.Next(0, count);
 
@@ -92,8 +95,11 @@ public static class EnumerableExtension
     /// Iterates through the enumerable, adding each item to a HashSet. If it ever fails to add it early exits and returns true.
     /// </summary>
     [Pure]
-    public static bool ContainsDuplicates<T>(this IEnumerable<T> enumerable)
+    public static bool ContainsDuplicates<T>(this IEnumerable<T>? enumerable)
     {
+        if (enumerable.IsNullOrEmpty())
+            return false;
+
         var hashSet = new HashSet<T>();
         
         foreach (T item in enumerable)
