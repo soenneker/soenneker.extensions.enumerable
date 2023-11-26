@@ -32,7 +32,6 @@ public static class EnumerableExtension
         return Empty(enumerable);
     }
 
-
     /// <summary>
     /// Shorthand for <see cref="IsNullOrEmpty{T}"/> == false.
     /// </summary>
@@ -54,8 +53,8 @@ public static class EnumerableExtension
         if (enumerable == null)
             throw new ArgumentNullException(nameof(enumerable));
 
-        /* If this is a list, use the Count property for efficiency. 
-        * The Count property is O(1) while IEnumerable.Count() is O(N). */
+        /* If this is a list, use the Count property for efficiency.
+         * The Count property is O(1) while IEnumerable.Count() is O(N). */
 
         if (enumerable is ICollection<T> collection)
             return collection.Count == 0;
@@ -76,7 +75,7 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Preferably you should use the List extension if you have a list.
+    /// Preferably you should use the List extension if you have a list. This will not throw an exception due to null or empty.
     /// </summary>
     [Pure]
     public static T? GetRandom<T>(this IEnumerable<T>? enumerable)
@@ -84,7 +83,37 @@ public static class EnumerableExtension
         if (enumerable.IsNullOrEmpty())
             return default;
 
+        var count = enumerable.Count();
+
+        if (count == 1)
+            return enumerable.ElementAt(0);
+
+        int index = RandomUtil.Next(0, count);
+
+        T result = enumerable.ElementAt(index);
+        return result;
+    }
+
+    /// <summary>
+    /// Throws an exception if the enumerable is null or empty.
+    /// </summary>
+    /// <remarks>Preferably you should use the List extension if you have a list.</remarks>
+    [Pure]
+    public static T GetRandomStrict<T>(this IEnumerable<T> enumerable)
+    {
+        if (enumerable == null)
+        {
+            throw new ArgumentNullException(nameof(enumerable));
+        }
+
         int count = enumerable.Count();
+
+        if (count == 0)
+            throw new ArgumentOutOfRangeException(nameof(enumerable));
+
+        if (count == 1)
+            return enumerable.ElementAt(0);
+
         int index = RandomUtil.Next(0, count);
 
         T result = enumerable.ElementAt(index);
@@ -101,7 +130,7 @@ public static class EnumerableExtension
             return false;
 
         var hashSet = new HashSet<T>();
-        
+
         foreach (T item in enumerable)
         {
             bool result = hashSet.Add(item);
@@ -116,12 +145,13 @@ public static class EnumerableExtension
     /// <summary>
     /// Iterates through the async enumerable, awaiting
     /// </summary>
+    /// <remarks>Does not maintain synchronization context</remarks>
     [Pure]
     public static async ValueTask<List<T>> ToList<T>(this IAsyncEnumerable<T> enumerable)
     {
         var result = new List<T>();
 
-        await foreach (T item in enumerable)
+        await foreach (T item in enumerable.ConfigureAwait(false))
         {
             result.Add(item);
         }
@@ -155,6 +185,7 @@ public static class EnumerableExtension
     /// </summary>
     /// <returns>Null if the source collection is is null. Otherwise returns an empty list if there are no children.</returns>
     [Pure]
+    [return: NotNullIfNotNull("enumerable")]
     public static List<T>? ToFlattenedFromRecursive<T>(this IEnumerable<T>? enumerable, Expression<Func<T, IEnumerable<T>?>> childCollection)
     {
         if (enumerable == null)
@@ -164,7 +195,7 @@ public static class EnumerableExtension
         var currentItems = new Queue<(int Index, T Item, int Depth)>(enumerable.Select(i => (0, i, 0)));
         var depthItemCounter = 0;
         var previousItemDepth = 0;
-        var childProperty = (PropertyInfo)((MemberExpression)childCollection.Body).Member;
+        var childProperty = (PropertyInfo) ((MemberExpression) childCollection.Body).Member;
         while (currentItems.Count > 0)
         {
             (int Index, T Item, int Depth) currentItem = currentItems.Dequeue();
@@ -178,6 +209,7 @@ public static class EnumerableExtension
             {
                 currentItems.Enqueue((resultIndex + 1, childItem, currentItem.Depth + 1));
             }
+
             previousItemDepth = currentItem.Depth;
         }
 
