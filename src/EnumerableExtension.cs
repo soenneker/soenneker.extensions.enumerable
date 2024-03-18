@@ -83,7 +83,7 @@ public static class EnumerableExtension
         if (enumerable.IsNullOrEmpty())
             return default;
 
-        var count = enumerable.Count();
+        int count = enumerable.Count();
 
         if (count == 1)
             return enumerable.ElementAt(0);
