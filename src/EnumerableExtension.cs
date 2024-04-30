@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Soenneker.Utils.Random;
 
@@ -167,6 +168,36 @@ public static class EnumerableExtension
             return null;
 
         return RemoveNullsInternal(source);
+    }
+
+    /// <summary>
+    /// Computes a hash code for an IEnumerable that incorporates the hash codes of all elements 
+    /// in the collection as well as the hash code based on the runtime identity of the collection instance.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the list.</typeparam>
+    /// <param name="enumerable">The enumerable for which the hash code is to be calculated. Cannot be null.</param>
+    /// <param name="includeIdentity"></param>
+    /// <returns>An integer representing the combined hash code of the instance identity and the elements within the list.</returns>
+    /// <remarks>
+    /// This method is useful for scenarios where lists are used as keys in collections
+    /// and you want to differentiate between different instances of a list with the same elements.
+    /// Note that using this hash code in persisting collections or across different executions might lead
+    /// to different results due to its dependency on runtime instance identities.
+    /// </remarks>
+    [Pure]
+    public static int GetAggregateHashCode<T>(this IEnumerable<T> enumerable, bool includeIdentity = true)
+    {
+        var hash = new HashCode();
+
+        if (includeIdentity)
+            hash.Add(RuntimeHelpers.GetHashCode(enumerable));
+
+        foreach (T item in enumerable)
+        {
+            hash.Add(item);
+        }
+
+        return hash.ToHashCode();
     }
 
     private static IEnumerable<T> RemoveNullsInternal<T>(IEnumerable<T> source)
