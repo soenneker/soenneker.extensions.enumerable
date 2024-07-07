@@ -66,6 +66,15 @@ public static class EnumerableExtension
         return !enumerable.Any();
     }
 
+    /// <summary>
+    /// Removes duplicate elements from the specified <see cref="IEnumerable{T}"/>.
+    /// </summary>
+    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+    /// <param name="enumerable">The sequence to remove duplicates from.</param>
+    /// <returns>A sequence that contains no duplicate elements.</returns>
+    /// <remarks>
+    /// This method uses a <see cref="HashSet{T}"/> to eliminate duplicate elements.
+    /// </remarks>
     [Pure]
     public static IEnumerable<T> RemoveDuplicates<T>(this IEnumerable<T> enumerable)
     {
@@ -73,6 +82,31 @@ public static class EnumerableExtension
         var hashSet = new HashSet<T>(enumerable);
 
         return hashSet;
+    }
+
+    /// <summary>
+    /// Removes duplicate elements from the specified <see cref="IEnumerable{T}"/> based on a specified key.
+    /// </summary>
+    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+    /// <typeparam name="TKey">The type of the key to determine uniqueness.</typeparam>
+    /// <param name="source">The sequence to remove duplicates from.</param>
+    /// <param name="keySelector">A function to extract the key from an element.</param>
+    /// <returns>A sequence that contains no duplicate elements based on the specified key.</returns>
+    /// <remarks>
+    /// This method uses a <see cref="HashSet{TKey}"/> to track seen keys and eliminate duplicate elements.
+    /// </remarks>
+    [Pure]
+    public static IEnumerable<T> RemoveDuplicates<T, TKey>(this IEnumerable<T> source, Func<T, TKey> keySelector)
+    {
+        var seenKeys = new HashSet<TKey>();
+
+        foreach (T element in source)
+        {
+            if (seenKeys.Add(keySelector(element)))
+            {
+                yield return element;
+            }
+        }
     }
 
     /// <summary>
