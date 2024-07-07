@@ -156,21 +156,29 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Iterates through the enumerable, adding each item to a HashSet. If it ever fails to add it early exits and returns true.
+    /// Determines whether the specified sequence contains any duplicate elements.
     /// </summary>
+    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+    /// <param name="enumerable">The sequence to check for duplicates. If the sequence is <c>null</c>, the method returns <c>false</c>.</param>
+    /// <returns>
+    /// <c>true</c> if the sequence contains duplicate elements; otherwise, <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// This method uses a <see cref="HashSet{T}"/> to track elements that have been seen.
+    /// As soon as a duplicate element is found, the method returns <c>true</c> immediately.
+    /// If no duplicates are found, the method returns <c>false</c>.
+    /// </remarks>
     [Pure]
     public static bool ContainsDuplicates<T>(this IEnumerable<T>? enumerable)
     {
-        if (enumerable.IsNullOrEmpty())
+        if (enumerable == null)
             return false;
 
         var hashSet = new HashSet<T>();
 
         foreach (T item in enumerable)
         {
-            bool result = hashSet.Add(item);
-
-            if (!result)
+            if (!hashSet.Add(item))
                 return true;
         }
 
@@ -178,20 +186,26 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Iterates through the async enumerable, awaiting
+    /// Checks if any element in the specified <see cref="IEnumerable{T}"/> has a key that matches the specified key.
     /// </summary>
-    /// <remarks>Does not maintain synchronization context</remarks>
+    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
+    /// <typeparam name="TKey">The type of the key to match.</typeparam>
+    /// <param name="source">The sequence to search for the key.</param>
+    /// <param name="keySelector">A function to extract the key from an element.</param>
+    /// <param name="key">The key to search for.</param>
+    /// <returns><c>true</c> if the key is found; otherwise, <c>false</c>.</returns>
     [Pure]
-    public static async ValueTask<List<T>> ToList<T>(this IAsyncEnumerable<T> enumerable)
+    public static bool ContainsKey<T, TKey>(this IEnumerable<T> source, Func<T, TKey> keySelector, TKey key)
     {
-        var result = new List<T>();
-
-        await foreach (T item in enumerable.ConfigureAwait(false))
+        foreach (T element in source)
         {
-            result.Add(item);
+            if (EqualityComparer<TKey>.Default.Equals(keySelector(element), key))
+            {
+                return true;
+            }
         }
 
-        return result;
+        return false;
     }
 
     [Pure]

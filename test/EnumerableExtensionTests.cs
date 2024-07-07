@@ -18,6 +18,24 @@ public class EnumerableExtensionTests
     }
 
     [Fact]
+    public void ContainsKey_ShouldReturnTrue_WhenKeyExists()
+    {
+        // Arrange
+        var pairs = new List<IdNamePair>
+        {
+            new() { Id = "1", Name = "Alice" },
+            new() { Id = "2", Name = "Bob" },
+            new() { Id = "3", Name = "Charlie" }
+        };
+
+        // Act
+        bool result = pairs.ContainsKey(p => p.Id, "2");
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
     public void RemoveDuplicates_ShouldRemoveDuplicatesBasedOnId()
     {
         // Arrange
