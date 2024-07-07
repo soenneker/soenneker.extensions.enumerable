@@ -186,20 +186,23 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Checks if any element in the specified <see cref="IEnumerable{T}"/> has a key that matches the specified key.
+    /// Determines whether the sequence contains any elements that satisfy the specified predicate.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
-    /// <typeparam name="TKey">The type of the key to match.</typeparam>
-    /// <param name="source">The sequence to search for the key.</param>
-    /// <param name="keySelector">A function to extract the key from an element.</param>
-    /// <param name="key">The key to search for.</param>
-    /// <returns><c>true</c> if the key is found; otherwise, <c>false</c>.</returns>
+    /// <param name="source">The sequence to search.</param>
+    /// <param name="predicate">A function to test each element for a condition.</param>
+    /// <returns>
+    ///   <c>true</c> if the sequence contains any elements that satisfy the specified predicate; otherwise, <c>false</c>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if <paramref name="source"/> or <paramref name="predicate"/> is <c>null</c>.
+    /// </exception>
     [Pure]
-    public static bool ContainsKey<T, TKey>(this IEnumerable<T> source, Func<T, TKey> keySelector, TKey key)
+    public static bool Contains<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         foreach (T element in source)
         {
-            if (EqualityComparer<TKey>.Default.Equals(keySelector(element), key))
+            if (predicate(element))
             {
                 return true;
             }

@@ -18,7 +18,7 @@ public class EnumerableExtensionTests
     }
 
     [Fact]
-    public void ContainsKey_ShouldReturnTrue_WhenKeyExists()
+    public void Contains_ShouldReturnTrue_WhenKeyExists()
     {
         // Arrange
         var pairs = new List<IdNamePair>
@@ -29,7 +29,7 @@ public class EnumerableExtensionTests
         };
 
         // Act
-        bool result = pairs.ContainsKey(p => p.Id, "2");
+        bool result = pairs.Contains(p => p.Id == "2");
 
         // Assert
         result.Should().BeTrue();
@@ -62,7 +62,7 @@ public class EnumerableExtensionTests
     {
         var test = new[] { "a", "b" };
 
-        string value = test.GetRandom();
+        string? value = test.GetRandom();
         value.Should().NotBeNull();
     }
 
