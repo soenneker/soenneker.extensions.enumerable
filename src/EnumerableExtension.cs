@@ -6,7 +6,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
+using Soenneker.Extensions.Task;
 using Soenneker.Utils.Random;
 
 namespace Soenneker.Extensions.Enumerable;
@@ -137,9 +139,7 @@ public static class EnumerableExtension
     public static T GetRandomStrict<T>(this IEnumerable<T> enumerable)
     {
         if (enumerable == null)
-        {
             throw new ArgumentNullException(nameof(enumerable));
-        }
 
         int count = enumerable.Count();
 
@@ -211,6 +211,25 @@ public static class EnumerableExtension
         return false;
     }
 
+    /// <summary>
+    /// Removes null elements from the specified sequence of items. If the source sequence is null, it returns null.
+    /// </summary>
+    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
+    /// <param name="source">The sequence of elements from which null values should be removed. Can be null.</param>
+    /// <returns>
+    /// A sequence of non-null elements from the original sequence. If <paramref name="source"/> is null, the result will be null.
+    /// </returns>
+    /// <remarks>
+    /// This method filters out null values from the sequence, preserving non-null elements. It maintains the input sequence's original order.
+    /// If the input sequence itself is null, it returns null without throwing an exception.
+    /// </remarks>
+    /// <example>
+    /// Example usage of <see cref="RemoveNulls{T}"/>:
+    /// <code>
+    /// var items = new List{string?} { "apple", null, "banana", "cherry", null };
+    /// var nonNullItems = items.RemoveNulls(); // Result: { "apple", "banana", "cherry" }
+    /// </code>
+    /// </example>
     [Pure]
     [return: NotNullIfNotNull("source")]
     public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T>? source)
@@ -289,7 +308,7 @@ public static class EnumerableExtension
             int resultIndex = currentItem.Index + depthItemCounter++;
             resultList.Insert(resultIndex, currentItem.Item);
 
-            IEnumerable<T> childItems = childProperty.GetValue(currentItem.Item) as IEnumerable<T> ?? System.Linq.Enumerable.Empty<T>();
+            IEnumerable<T> childItems = childProperty.GetValue(currentItem.Item) as IEnumerable<T> ?? [];
             foreach (T childItem in childItems)
             {
                 currentItems.Enqueue((resultIndex + 1, childItem, currentItem.Depth + 1));
@@ -299,5 +318,50 @@ public static class EnumerableExtension
         }
 
         return resultList;
+    }
+
+    /// <summary>
+    /// Asynchronously filters a sequence of values based on a predicate that supports asynchronous execution.
+    /// </summary>
+    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
+    /// <param name="source">The sequence of elements to apply the filter on.</param>
+    /// <param name="filter">
+    /// A function to test each element for a condition asynchronously. 
+    /// The function takes the element of type <typeparamref name="T"/> and a <see cref="CancellationToken"/> 
+    /// and returns a <see cref="Task{Boolean}"/> representing the asynchronous result of the predicate.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// A <see cref="CancellationToken"/> to observe while waiting for the asynchronous filter operation to complete. 
+    /// If the token is canceled, the method stops filtering and exits early.
+    /// </param>
+    /// <returns>
+    /// An <see cref="IAsyncEnumerable{T}"/> that contains elements from the input sequence that satisfy the condition.
+    /// </returns>
+    /// <remarks>
+    /// This method is useful when filtering operations are expensive or involve asynchronous I/O operations. 
+    /// The method also supports cancellation to allow for responsive and resource-efficient processing.
+    /// </remarks>
+    /// <example>
+    /// Example usage of <see cref="WhereAsync{T}"/>:
+    /// <code>
+    /// var filteredItems = await source.WhereAsync(async (item, token) => 
+    /// {
+    ///     return await SomeAsyncPredicate(item, token);
+    /// }, cancellationToken).ToListAsync();
+    /// </code>
+    /// </example>
+    public static async IAsyncEnumerable<T> WhereAsync<T>(this IEnumerable<T> source, Func<T, CancellationToken, Task<bool>> filter,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        foreach (T item in source)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                yield break;
+
+            bool result = await filter(item, cancellationToken).NoSync();
+
+            if (result)
+                yield return item;
+        }
     }
 }
