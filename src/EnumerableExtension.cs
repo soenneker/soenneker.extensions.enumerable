@@ -53,19 +53,19 @@ public static class EnumerableExtension
     [Pure]
     public static bool Empty<T>(this IEnumerable<T> enumerable)
     {
-        if (enumerable == null)
-            throw new ArgumentNullException(nameof(enumerable));
+        ArgumentNullException.ThrowIfNull(enumerable);
 
-        /* If this is a list, use the Count property for efficiency.
-         * The Count property is O(1) while IEnumerable.Count() is O(N). */
+        switch (enumerable)
+        {
+            case ICollection<T> collection:
+                return collection.Count == 0;
+            case IReadOnlyCollection<T> readonlyCollection:
+                return readonlyCollection.Count == 0;
+        }
 
-        if (enumerable is ICollection<T> collection)
-            return collection.Count == 0;
-
-        if (enumerable is IReadOnlyCollection<T> readonlyCollection) // Need this because IReadOnlyCollection does not inherit from ICollection
-            return readonlyCollection.Count == 0;
-
-        return !enumerable.Any();
+        // Enumerator shouldn't need disposal.
+        IEnumerator<T> enumerator = enumerable.GetEnumerator();
+        return !enumerator.MoveNext();
     }
 
     /// <summary>
@@ -138,8 +138,7 @@ public static class EnumerableExtension
     [Pure]
     public static T GetRandomStrict<T>(this IEnumerable<T> enumerable)
     {
-        if (enumerable == null)
-            throw new ArgumentNullException(nameof(enumerable));
+        ArgumentNullException.ThrowIfNull(enumerable);
 
         int count = enumerable.Count();
 
