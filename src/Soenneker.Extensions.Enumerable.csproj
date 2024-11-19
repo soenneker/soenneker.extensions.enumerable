@@ -37,6 +37,6 @@
         <None Include="..\LICENSE" Pack="true" PackagePath="\" />
         <None Include="..\icon.png" Pack="true" PackagePath="\" />
         <PackageReference Include="Soenneker.Extensions.Task" Version="3.0.67" />
-        <PackageReference Include="Soenneker.Utils.Random" Version="3.0.48" />
+        <PackageReference Include="Soenneker.Utils.Random" Version="3.0.49" />
     </ItemGroup>
 </Project>
