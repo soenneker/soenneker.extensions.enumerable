@@ -29,7 +29,7 @@ public static class EnumerableExtension
     [Pure]
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this IEnumerable<T>? enumerable)
     {
-        if (enumerable == null)
+        if (enumerable is null)
             return true;
 
         return Empty(enumerable);
@@ -244,7 +244,7 @@ public static class EnumerableExtension
     [Pure]
     public static bool ContainsDuplicates<T>(this IEnumerable<T>? enumerable)
     {
-        if (enumerable == null)
+        if (enumerable is null)
             return false;
 
         var hashSet = new HashSet<T>(EqualityComparer<T>.Default);
@@ -323,7 +323,7 @@ public static class EnumerableExtension
     [return: NotNullIfNotNull("source")]
     public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T>? source)
     {
-        if (source == null)
+        if (source is null)
             return null;
 
         return RemoveNullsInternal(source);
@@ -345,7 +345,7 @@ public static class EnumerableExtension
     /// </remarks>
     public static int GetAggregateHashCode<T>(this IEnumerable<T>? enumerable, bool includeIdentity = true)
     {
-        if (enumerable == null)
+        if (enumerable is null)
             return -1;
 
         // Start with a hash code accumulator
@@ -360,7 +360,7 @@ public static class EnumerableExtension
         // Iterate over the collection
         foreach (T item in enumerable)
         {
-            if (item != null)
+            if (item is not null)
             {
                 hash = (hash * 397) ^ item.GetHashCode();
             }
@@ -385,7 +385,7 @@ public static class EnumerableExtension
 
             foreach (T item in collection)
             {
-                if (item != null)
+                if (item is not null)
                     yield return item;
             }
         }
@@ -394,7 +394,7 @@ public static class EnumerableExtension
             // For non ICollection<T> collections, we proceed with normal iteration
             foreach (T item in source)
             {
-                if (item != null)
+                if (item is not null)
                     yield return item;
             }
         }
@@ -408,7 +408,7 @@ public static class EnumerableExtension
     [return: NotNullIfNotNull("enumerable")]
     public static List<T>? ToFlattenedFromRecursive<T>(this IEnumerable<T>? enumerable, Expression<Func<T, IEnumerable<T>?>> childCollection)
     {
-        if (enumerable == null)
+        if (enumerable is null)
             return null;
 
         var resultList = new List<T>();
