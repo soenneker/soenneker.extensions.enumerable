@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" Version="8.0.0" />
+    <PackageReference Include="FluentAssertions" Version="8.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Soenneker.Dtos.IdNamePair" Version="3.0.518" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
