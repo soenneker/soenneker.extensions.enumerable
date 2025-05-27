@@ -9,7 +9,7 @@
     <ItemGroup>
         <PackageReference Include="AwesomeAssertions" Version="9.0.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
-        <PackageReference Include="Soenneker.Dtos.IdNamePair" Version="3.0.674" />
+        <PackageReference Include="Soenneker.Dtos.IdNamePair" Version="3.0.675" />
         <PackageReference Include="System.Linq.Async" Version="6.0.1" />
 
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0">
