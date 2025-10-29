@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AwesomeAssertions" Version="9.2.1" />
+        <PackageReference Include="AwesomeAssertions" Version="9.3.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
         <PackageReference Include="Soenneker.Dtos.IdNamePair" Version="3.0.682" />
         <PackageReference Include="System.Linq.Async" Version="6.0.3" />
