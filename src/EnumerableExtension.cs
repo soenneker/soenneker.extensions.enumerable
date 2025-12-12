@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
@@ -247,7 +247,11 @@ public static class EnumerableExtension
         if (enumerable is null)
             return false;
 
-        var hashSet = new HashSet<T>(EqualityComparer<T>.Default);
+        // Pre-allocate capacity if we know the size
+        int capacity = enumerable is ICollection<T> collection ? collection.Count : 0;
+        var hashSet = capacity > 0 
+            ? new HashSet<T>(capacity, EqualityComparer<T>.Default)
+            : new HashSet<T>(EqualityComparer<T>.Default);
 
         foreach (T item in enumerable)
         {
@@ -411,7 +415,9 @@ public static class EnumerableExtension
         if (enumerable is null)
             return null;
 
-        var resultList = new List<T>();
+        // Estimate initial capacity if available
+        int estimatedCapacity = enumerable is ICollection<T> collection ? collection.Count : 16;
+        var resultList = new List<T>(estimatedCapacity);
         var currentItems = new Queue<(T Item, int Depth)>();
 
         // Cache the child collection property getter to avoid reflection overhead in each loop iteration
