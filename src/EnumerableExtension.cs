@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Soenneker.Extensions.Task;
+using Soenneker.Extensions.ValueTask;
 using Soenneker.Utils.Random;
+
 // ReSharper disable PossibleMultipleEnumeration
 
 namespace Soenneker.Extensions.Enumerable;
@@ -21,89 +22,83 @@ public static class EnumerableExtension
     /// <summary>
     /// Determines whether the collection is null or contains no elements.
     /// </summary>
-    /// <typeparam name="T">The IEnumerable type.</typeparam>
-    /// <param name="enumerable">The enumerable, which may be null or empty.</param>
-    /// <returns>
-    ///     <c>true</c> if the IEnumerable is null or empty; otherwise, <c>false</c>.
-    /// </returns>
     [Pure]
-    public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this IEnumerable<T>? enumerable)
-    {
-        if (enumerable is null)
-            return true;
-
-        return Empty(enumerable);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this IEnumerable<T>? enumerable) => enumerable is null || enumerable.Empty();
 
     /// <summary>
     /// Shorthand for <see cref="IsNullOrEmpty{T}"/> == false.
     /// </summary>
-    /// <remarks>Makes calls like <code>if (!list.IsNullOrEmpty())</code> easier to read</remarks>
     [Pure]
-    public static bool Populated<T>([NotNullWhen(true)] this IEnumerable<T>? enumerable)
-    {
-        return !IsNullOrEmpty(enumerable);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Populated<T>([NotNullWhen(true)] this IEnumerable<T>? enumerable) => enumerable is not null && !enumerable.Empty();
 
     /// <summary>
-    /// Determines whether the collection is empty <para></para>
-    /// Assumes collection is non-null, will throw if it is. <see cref="IsNullOrEmpty{T}"/> for more safety.
+    /// Determines whether the collection is empty. Assumes collection is non-null.
     /// </summary>
-    /// <exception cref="ArgumentNullException"></exception>
     [Pure]
     public static bool Empty<T>(this IEnumerable<T> enumerable)
     {
         ArgumentNullException.ThrowIfNull(enumerable);
 
-        // Direct check for ICollection or IReadOnlyCollection, which provides the Count property.
-        if (enumerable is ICollection<T> collection)
-            return collection.Count == 0;
+        // Fast paths
+        if (enumerable is ICollection<T> c1)
+            return c1.Count == 0;
 
-        // For other IEnumerable<T> types, use an enumerator
-        using (IEnumerator<T> enumerator = enumerable.GetEnumerator())
+        if (enumerable is IReadOnlyCollection<T> c2)
+            return c2.Count == 0;
+
+        // Enumerate minimally
+        using IEnumerator<T> e = enumerable.GetEnumerator();
+        return !e.MoveNext();
+    }
+
+    /// <summary>
+    /// Removes duplicate elements from the specified sequence, preserving the first occurrence order.
+    /// </summary>
+    [Pure]
+    public static IEnumerable<T> RemoveDuplicates<T>(this IEnumerable<T> enumerable)
+    {
+        ArgumentNullException.ThrowIfNull(enumerable);
+
+        int capacity = enumerable is ICollection<T> c ? c.Count : enumerable is IReadOnlyCollection<T> rc ? rc.Count : 0;
+
+        return RemoveDuplicatesIterator(enumerable, capacity);
+    }
+
+    private static IEnumerable<T> RemoveDuplicatesIterator<T>(IEnumerable<T> source, int capacity)
+    {
+        var seen = capacity > 0 ? new HashSet<T>(capacity) : new HashSet<T>();
+
+        foreach (T item in source)
         {
-            return !enumerator.MoveNext();
+            if (seen.Add(item))
+                yield return item;
         }
     }
 
     /// <summary>
-    /// Removes duplicate elements from the specified <see cref="IEnumerable{T}"/>.
+    /// Removes duplicate elements from the specified sequence based on a specified key.
+    /// Preserves the first occurrence order.
     /// </summary>
-    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
-    /// <param name="enumerable">The sequence to remove duplicates from.</param>
-    /// <returns>A sequence that contains no duplicate elements.</returns>
-    /// <remarks>
-    /// This method uses a <see cref="HashSet{T}"/> to eliminate duplicate elements.
-    /// </remarks>
-    [Pure]
-    public static IEnumerable<T> RemoveDuplicates<T>(this IEnumerable<T> enumerable)
-    {
-        // Deduplication within ctor
-        return new HashSet<T>(enumerable);
-    }
-
-    /// <summary>
-    /// Removes duplicate elements from the specified <see cref="IEnumerable{T}"/> based on a specified key.
-    /// </summary>
-    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
-    /// <typeparam name="TKey">The type of the key to determine uniqueness.</typeparam>
-    /// <param name="source">The sequence to remove duplicates from.</param>
-    /// <param name="keySelector">A function to extract the key from an element.</param>
-    /// <returns>A sequence that contains no duplicate elements based on the specified key.</returns>
-    /// <remarks>
-    /// This method uses a <see cref="HashSet{TKey}"/> to track seen keys and eliminate duplicate elements.
-    /// </remarks>
     [Pure]
     public static IEnumerable<T> RemoveDuplicates<T, TKey>(this IEnumerable<T> source, Func<T, TKey> keySelector)
     {
-        // Preallocate the HashSet if we know the approximate size (optional optimization for large collections)
-        var seenKeys = new HashSet<TKey>(source is ICollection<T> collection ? collection.Count : 0);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(keySelector);
+
+        int capacity = source is ICollection<T> c ? c.Count : source is IReadOnlyCollection<T> rc ? rc.Count : 0;
+
+        return RemoveDuplicatesByKeyIterator(source, keySelector, capacity);
+    }
+
+    private static IEnumerable<T> RemoveDuplicatesByKeyIterator<T, TKey>(IEnumerable<T> source, Func<T, TKey> keySelector, int capacity)
+    {
+        var seenKeys = capacity > 0 ? new HashSet<TKey>(capacity) : new HashSet<TKey>();
 
         foreach (T element in source)
         {
-            // Avoid calling keySelector multiple times for the same element
             TKey key = keySelector(element);
-
             if (seenKeys.Add(key))
                 yield return element;
         }
@@ -113,149 +108,108 @@ public static class EnumerableExtension
     /// Preferably you should use the List extension if you have a list. This will not throw an exception due to null or empty.
     /// </summary>
     [Pure]
-    public static T GetRandom<T>(this IEnumerable<T>? enumerable)
-    {
-        // Handle collections that implement ICollection<T> for better performance
-        if (enumerable is ICollection<T> collection)
-        {
-            // If the collection is empty, return default
-            if (collection.Count == 0)
-                return default!;
-
-            // Get a random index
-            int index = RandomUtil.Next(0, collection.Count);
-
-            // If it's an IList<T> or T[], access by index directly
-            if (enumerable is IList<T> list)
-            {
-                return list[index];
-            }
-
-            if (enumerable is T[] array)
-            {
-                return array[index];
-            }
-
-            // For non-indexed ICollection<T> types, manually iterate to find the element at random index
-            var i = 0;
-            foreach (T item in enumerable)
-            {
-                if (i == index)
-                    return item;
-                i++;
-            }
-        }
-
-        // For non-ICollection<T> collections, use reservoir sampling
-        var count = 0;
-        T randomElement = default!;
-
-        foreach (T element in enumerable)
-        {
-            count++;
-            if (RandomUtil.Next(0, count) == 0) // Reservoir sampling
-            {
-                randomElement = element;
-            }
-        }
-
-        // Handle the case when the collection is empty
-        if (count == 0)
-            return default!;
-
-        return randomElement;
-    }
+    public static T GetRandom<T>(this IEnumerable<T>? enumerable) => TryGetRandom(enumerable, out T value) ? value : default!;
 
     /// <summary>
     /// Throws an exception if the enumerable is null or empty.
     /// </summary>
-    /// <remarks>Preferably you should use the List extension if you have a list.</remarks>
     [Pure]
     public static T GetRandomStrict<T>(this IEnumerable<T> enumerable)
     {
         ArgumentNullException.ThrowIfNull(enumerable);
 
-        // Check for ICollection<T> for faster access to Count and more efficient random access
-        if (enumerable is ICollection<T> collection)
-        {
-            // If the collection is empty, throw an exception
-            if (collection.Count == 0)
-                throw new ArgumentOutOfRangeException(nameof(enumerable), "The collection cannot be empty.");
-
-            // Handle random access directly if the collection has known Count
-            int index = RandomUtil.Next(0, collection.Count);
-
-            // If it's a List<T>, array, or any other indexed collection, we can directly access by index
-            if (enumerable is IList<T> list)
-            {
-                return list[index];
-            }
-
-            if (enumerable is T[] array)
-            {
-                return array[index];
-            }
-
-            // For other ICollection<T> types, iterate through to get the element at the random index
-            // This step is necessary for non-indexed collections, but still efficient as we're only accessing once.
-            var i = 0;
-
-            foreach (T item in enumerable)
-            {
-                if (i == index)
-                    return item;
-                i++;
-            }
-        }
-
-        // For non-ICollection<T> collections, perform reservoir sampling
-        var count = 0;
-        T result = default!;
-
-        foreach (T element in enumerable)
-        {
-            count++;
-            if (RandomUtil.Next(0, count) == 0)
-            {
-                result = element;
-            }
-        }
-
-        // If no elements were found, throw an exception
-        if (count == 0)
+        if (!TryGetRandom(enumerable, out T value))
             throw new ArgumentOutOfRangeException(nameof(enumerable), "The collection cannot be empty.");
 
-        return result;
+        return value;
+    }
+
+    /// <summary>
+    /// Shared random selection logic with fast paths and reservoir sampling fallback.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryGetRandom<T>(IEnumerable<T>? enumerable, out T value)
+    {
+        value = default!;
+
+        if (enumerable is null)
+            return false;
+
+        // Fast path: arrays
+        if (enumerable is T[] array)
+        {
+            if ((uint)array.Length == 0)
+                return false;
+
+            value = array[RandomUtil.Next(0, array.Length)];
+            return true;
+        }
+
+        // Fast path: IList<T>
+        if (enumerable is IList<T> list)
+        {
+            int count = list.Count;
+            if ((uint)count == 0)
+                return false;
+
+            value = list[RandomUtil.Next(0, count)];
+            return true;
+        }
+
+        // Count-known but not indexable: pick a target index then walk once
+        if (enumerable is ICollection<T> collection)
+        {
+            int count = collection.Count;
+            if ((uint)count == 0)
+                return false;
+
+            int target = RandomUtil.Next(0, count);
+
+            var i = 0;
+            foreach (T item in enumerable)
+            {
+                if (i++ == target)
+                {
+                    value = item;
+                    return true;
+                }
+            }
+
+            // Should not happen if Count is honest, but keep it safe.
+            return false;
+        }
+
+        // Reservoir sampling: single pass, no buffering
+        var seen = 0;
+        foreach (T element in enumerable)
+        {
+            seen++;
+            if (RandomUtil.Next(0, seen) == 0)
+                value = element;
+        }
+
+        return seen != 0;
     }
 
     /// <summary>
     /// Determines whether the specified sequence contains any duplicate elements.
     /// </summary>
-    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
-    /// <param name="enumerable">The sequence to check for duplicates. If the sequence is <c>null</c>, the method returns <c>false</c>.</param>
-    /// <returns>
-    /// <c>true</c> if the sequence contains duplicate elements; otherwise, <c>false</c>.
-    /// </returns>
-    /// <remarks>
-    /// This method uses a <see cref="HashSet{T}"/> to track elements that have been seen.
-    /// As soon as a duplicate element is found, the method returns <c>true</c> immediately.
-    /// If no duplicates are found, the method returns <c>false</c>.
-    /// </remarks>
     [Pure]
     public static bool ContainsDuplicates<T>(this IEnumerable<T>? enumerable)
     {
         if (enumerable is null)
             return false;
 
-        // Pre-allocate capacity if we know the size
-        int capacity = enumerable is ICollection<T> collection ? collection.Count : 0;
-        var hashSet = capacity > 0 
-            ? new HashSet<T>(capacity, EqualityComparer<T>.Default)
-            : new HashSet<T>(EqualityComparer<T>.Default);
+        int count = enumerable is ICollection<T> c ? c.Count : enumerable is IReadOnlyCollection<T> rc ? rc.Count : -1;
+
+        if (count is 0 or 1)
+            return false;
+
+        var set = count > 1 ? new HashSet<T>(count) : new HashSet<T>();
 
         foreach (T item in enumerable)
         {
-            if (!hashSet.Add(item))
+            if (!set.Add(item))
                 return true;
         }
 
@@ -265,40 +219,17 @@ public static class EnumerableExtension
     /// <summary>
     /// Determines whether the sequence contains any elements that satisfy the specified predicate.
     /// </summary>
-    /// <typeparam name="T">The type of the elements in the sequence.</typeparam>
-    /// <param name="source">The sequence to search.</param>
-    /// <param name="predicate">A function to test each element for a condition.</param>
-    /// <returns>
-    ///   <c>true</c> if the sequence contains any elements that satisfy the specified predicate; otherwise, <c>false</c>.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown if <paramref name="source"/> or <paramref name="predicate"/> is <c>null</c>.
-    /// </exception>
     [Pure]
     public static bool Contains<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
-        // Handle collections that implement ICollection<T> for faster access.
-        if (source is ICollection<T> collection)
-        {
-            // If the collection is empty, no need to iterate
-            if (collection.Count == 0)
-                return false;
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-            // Loop through the collection and check for the predicate
-            foreach (T item in collection)
-            {
-                if (predicate(item))
-                    return true;
-            }
-        }
-        else
+        // Avoid the ICollection split: foreach already avoids enumerator allocations for arrays/lists
+        foreach (T item in source)
         {
-            // For non-ICollection<T> (e.g., LinkedList<T>, etc.), just use the foreach loop
-            foreach (T element in source)
-            {
-                if (predicate(element))
-                    return true;
-            }
+            if (predicate(item))
+                return true;
         }
 
         return false;
@@ -307,22 +238,6 @@ public static class EnumerableExtension
     /// <summary>
     /// Removes null elements from the specified sequence of items. If the source sequence is null, it returns null.
     /// </summary>
-    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="source">The sequence of elements from which null values should be removed. Can be null.</param>
-    /// <returns>
-    /// A sequence of non-null elements from the original sequence. If <paramref name="source"/> is null, the result will be null.
-    /// </returns>
-    /// <remarks>
-    /// This method filters out null values from the sequence, preserving non-null elements. It maintains the input sequence's original order.
-    /// If the input sequence itself is null, it returns null without throwing an exception.
-    /// </remarks>
-    /// <example>
-    /// Example usage of <see cref="RemoveNulls{T}"/>:
-    /// <code>
-    /// var items = new List{string?} { "apple", null, "banana", "cherry", null };
-    /// var nonNullItems = items.RemoveNulls(); // Result: { "apple", "banana", "cherry" }
-    /// </code>
-    /// </example>
     [Pure]
     [return: NotNullIfNotNull("source")]
     public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T>? source)
@@ -333,81 +248,74 @@ public static class EnumerableExtension
         return RemoveNullsInternal(source);
     }
 
+    private static IEnumerable<T> RemoveNullsInternal<T>(IEnumerable<T> source)
+    {
+        foreach (T item in source)
+        {
+            if (item is not null)
+                yield return item;
+        }
+    }
+
     /// <summary>
-    /// Computes a hash code for an IEnumerable that incorporates the hash codes of all elements 
-    /// in the collection as well as the hash code based on the runtime identity of the collection instance.
+    /// Computes a hash code for an IEnumerable that incorporates the hash codes of all elements
+    /// and optionally the runtime identity of the collection instance.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the list.</typeparam>
-    /// <param name="enumerable">The enumerable for which the hash code is to be calculated.</param>
-    /// <param name="includeIdentity"></param>
-    /// <returns>An integer representing the combined hash code of the instance identity and the elements within the list. If the enumerable is null, returns -1</returns>
-    /// <remarks>
-    /// This method is useful for scenarios where lists are used as keys in collections
-    /// and you want to differentiate between different instances of a list with the same elements.
-    /// Note that using this hash code in persisting collections or across different executions might lead
-    /// to different results due to its dependency on runtime instance identities.
-    /// </remarks>
     public static int GetAggregateHashCode<T>(this IEnumerable<T>? enumerable, bool includeIdentity = true)
     {
         if (enumerable is null)
             return -1;
 
-        // Start with a hash code accumulator
-        var hash = 0;
+        var hc = new HashCode();
 
-        // If we want to include the identity of the collection
         if (includeIdentity)
-        {
-            hash = RuntimeHelpers.GetHashCode(enumerable);
-        }
+            hc.Add(RuntimeHelpers.GetHashCode(enumerable));
 
-        // Iterate over the collection
         foreach (T item in enumerable)
-        {
-            if (item is not null)
-            {
-                hash = (hash * 397) ^ item.GetHashCode();
-            }
-            else
-            {
-                // Null item handling - ensure the correct hash is computed
-                hash = (hash * 397) ^ 0;
-            }
-        }
+            hc.Add(item);
 
-        return hash;
-    }
-
-    private static IEnumerable<T> RemoveNullsInternal<T>(IEnumerable<T> source)
-    {
-        // Handle ICollection<T> for better performance with Count.
-        if (source is ICollection<T> collection)
-        {
-            // If the collection is empty, we don't need to iterate
-            if (collection.Count == 0)
-                yield break; // exit early
-
-            foreach (T item in collection)
-            {
-                if (item is not null)
-                    yield return item;
-            }
-        }
-        else
-        {
-            // For non ICollection<T> collections, we proceed with normal iteration
-            foreach (T item in source)
-            {
-                if (item is not null)
-                    yield return item;
-            }
-        }
+        return hc.ToHashCode();
     }
 
     /// <summary>
     /// Flattens and returns a collection of recursive children. Preserves underlying references even though it's a new list.
     /// </summary>
-    /// <returns>Null if the source collection is is null. Otherwise returns an empty list if there are no children.</returns>
+    [Pure]
+    [return: NotNullIfNotNull("enumerable")]
+    public static List<T>? ToFlattenedFromRecursive<T>(this IEnumerable<T>? enumerable, Func<T, IEnumerable<T>?> childSelector)
+    {
+        if (enumerable is null)
+            return null;
+
+        ArgumentNullException.ThrowIfNull(childSelector);
+
+        int estimatedCapacity = enumerable is ICollection<T> c ? c.Count : enumerable is IReadOnlyCollection<T> rc ? rc.Count : 16;
+
+        var result = new List<T>(estimatedCapacity);
+        var queue = new Queue<T>();
+
+        foreach (T item in enumerable)
+            queue.Enqueue(item);
+
+        while (queue.Count > 0)
+        {
+            T current = queue.Dequeue();
+            result.Add(current);
+
+            IEnumerable<T>? children = childSelector(current);
+            if (children is null)
+                continue;
+
+            foreach (T child in children)
+                queue.Enqueue(child);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Expression-based overload; compiles a delegate once per call (no reflection per item).
+    /// </summary>
     [Pure]
     [return: NotNullIfNotNull("enumerable")]
     public static List<T>? ToFlattenedFromRecursive<T>(this IEnumerable<T>? enumerable, Expression<Func<T, IEnumerable<T>?>> childCollection)
@@ -415,71 +323,19 @@ public static class EnumerableExtension
         if (enumerable is null)
             return null;
 
-        // Estimate initial capacity if available
-        int estimatedCapacity = enumerable is ICollection<T> collection ? collection.Count : 16;
-        var resultList = new List<T>(estimatedCapacity);
-        var currentItems = new Queue<(T Item, int Depth)>();
+        ArgumentNullException.ThrowIfNull(childCollection);
 
-        // Cache the child collection property getter to avoid reflection overhead in each loop iteration
-        var childProperty = (PropertyInfo)((MemberExpression)childCollection.Body).Member;
-        var getChildItems = new Func<T, IEnumerable<T>>(
-            item => (IEnumerable<T>?)childProperty.GetValue(item) ?? []
-        );
-
-        foreach (T item in enumerable)
-        {
-            currentItems.Enqueue((item, 0));
-        }
-
-        while (currentItems.Count > 0)
-        {
-            (T Item, int Depth) currentItem = currentItems.Dequeue();
-            resultList.Add(currentItem.Item);
-
-            // Get child items and enqueue them with incremented depth
-            IEnumerable<T> childItems = getChildItems(currentItem.Item);
-            foreach (T childItem in childItems)
-            {
-                currentItems.Enqueue((childItem, currentItem.Depth + 1));
-            }
-        }
-
-        return resultList;
+        // Compile once per call. If you call this in tight loops, prefer the Func<> overload.
+        Func<T, IEnumerable<T>?> selector = childCollection.Compile();
+        return enumerable.ToFlattenedFromRecursive(selector);
     }
 
-    /// <summary>
-    /// Asynchronously filters a sequence of values based on a predicate that supports asynchronous execution.
-    /// </summary>
-    /// <typeparam name="T">The type of the elements in the source sequence.</typeparam>
-    /// <param name="source">The sequence of elements to apply the filter on.</param>
-    /// <param name="filter">
-    /// A function to test each element for a condition asynchronously. 
-    /// The function takes the element of type <typeparamref name="T"/> and a <see cref="CancellationToken"/> 
-    /// and returns a <see cref="Task{Boolean}"/> representing the asynchronous result of the predicate.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// A <see cref="CancellationToken"/> to observe while waiting for the asynchronous filter operation to complete. 
-    /// If the token is canceled, the method stops filtering and exits early.
-    /// </param>
-    /// <returns>
-    /// An <see cref="IAsyncEnumerable{T}"/> that contains elements from the input sequence that satisfy the condition.
-    /// </returns>
-    /// <remarks>
-    /// This method is useful when filtering operations are expensive or involve asynchronous I/O operations. 
-    /// The method also supports cancellation to allow for responsive and resource-efficient processing.
-    /// </remarks>
-    /// <example>
-    /// Example usage of <see cref="WhereAsync{T}"/>:
-    /// <code>
-    /// var filteredItems = await source.WhereAsync(async (item, token) => 
-    /// {
-    ///     return await SomeAsyncPredicate(item, token);
-    /// }, cancellationToken).ToListAsync();
-    /// </code>
-    /// </example>
     public static async IAsyncEnumerable<T> WhereAsync<T>(this IEnumerable<T> source, Func<T, CancellationToken, Task<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(filter);
+
         if (cancellationToken.IsCancellationRequested)
             yield break;
 
@@ -488,9 +344,80 @@ public static class EnumerableExtension
             if (cancellationToken.IsCancellationRequested)
                 yield break;
 
-            bool result = await filter(item, cancellationToken).NoSync();
+            bool include;
+            try
+            {
+                include = await filter(item, cancellationToken)
+                    .NoSync();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                yield break;
+            }
 
-            if (result)
+            if (include)
+                yield return item;
+        }
+    }
+
+    public static async IAsyncEnumerable<T> WhereAsync<T>(this IEnumerable<T> source, Func<T, CancellationToken, ValueTask<bool>> filter,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(filter);
+
+        if (cancellationToken.IsCancellationRequested)
+            yield break;
+
+        foreach (T item in source)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                yield break;
+
+            bool include;
+            try
+            {
+                include = await filter(item, cancellationToken)
+                    .NoSync();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                yield break;
+            }
+
+            if (include)
+                yield return item;
+        }
+    }
+
+    public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(this IEnumerable<T> source, Func<T, CancellationToken, Task<bool>> filter,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(filter);
+
+        foreach (T item in source)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (await filter(item, cancellationToken)
+                    .NoSync())
+                yield return item;
+        }
+    }
+
+    public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(this IEnumerable<T> source, Func<T, CancellationToken, ValueTask<bool>> filter,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(filter);
+
+        foreach (T item in source)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (await filter(item, cancellationToken)
+                    .NoSync())
                 yield return item;
         }
     }
