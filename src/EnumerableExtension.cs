@@ -268,7 +268,7 @@ public static class EnumerableExtension
     /// <param name="enumerable">The enumerable collection whose element count is to be determined. Cannot be null.</param>
     /// <returns>The number of elements in the enumerable if the count can be determined without enumeration; otherwise, 0.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetNonEnumeratedCount<T>(IEnumerable<T> enumerable)
+    public static int GetNonEnumeratedCount<T>(this IEnumerable<T> enumerable)
     {
         // Linq.. but this isn't slow nor allocates
         if (enumerable.TryGetNonEnumeratedCount(out int count))
