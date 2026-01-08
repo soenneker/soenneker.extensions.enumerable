@@ -259,7 +259,7 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Attempts to retrieve the count of elements in the specified enumerable without fully enumerating it.
+    /// Attempts to retrieve the count of elements in the specified enumerable without fully enumerating it. This is NOT an actual count, it's a preallocation hint.
     /// </summary>
     /// <remarks>This method uses efficient mechanisms to obtain the count, such as checking for
     /// implementations of ICollection<T>, IReadOnlyCollection<T>, or TryGetNonEnumeratedCount. If the count cannot be
