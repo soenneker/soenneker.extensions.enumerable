@@ -1,14 +1,15 @@
+using Soenneker.Extensions.Task;
+using Soenneker.Extensions.ValueTask;
+using Soenneker.Utils.Random;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Soenneker.Extensions.Task;
-using Soenneker.Extensions.ValueTask;
-using Soenneker.Utils.Random;
 
 // ReSharper disable PossibleMultipleEnumeration
 
@@ -255,6 +256,31 @@ public static class EnumerableExtension
             if (item is not null)
                 yield return item;
         }
+    }
+
+    /// <summary>
+    /// Attempts to retrieve the count of elements in the specified enumerable without fully enumerating it.
+    /// </summary>
+    /// <remarks>This method uses efficient mechanisms to obtain the count, such as checking for
+    /// implementations of ICollection<T>, IReadOnlyCollection<T>, or TryGetNonEnumeratedCount. If the count cannot be
+    /// determined without enumeration, the method returns 0 and does not enumerate the collection.</remarks>
+    /// <typeparam name="T">The type of elements in the enumerable.</typeparam>
+    /// <param name="enumerable">The enumerable collection whose element count is to be determined. Cannot be null.</param>
+    /// <returns>The number of elements in the enumerable if the count can be determined without enumeration; otherwise, 0.</returns>
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int GetNonEnumeratedCount<T>(IEnumerable<T> enumerable)
+    {
+        // Linq.. but this isn't slow nor allocates
+        if (enumerable.TryGetNonEnumeratedCount(out int count))
+            return count;
+
+        if (enumerable is ICollection<T> c)
+            return c.Count;
+
+        if (enumerable is IReadOnlyCollection<T> roc)
+            return roc.Count;
+
+        return 0;
     }
 
     /// <summary>
