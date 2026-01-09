@@ -69,7 +69,7 @@ public static class EnumerableExtension
 
     private static IEnumerable<T> RemoveDuplicatesIterator<T>(IEnumerable<T> source, int capacity)
     {
-        var seen = capacity > 0 ? new HashSet<T>(capacity) : new HashSet<T>();
+        HashSet<T> seen = capacity > 0 ? new HashSet<T>(capacity) : new HashSet<T>();
 
         foreach (T item in source)
         {
@@ -95,7 +95,7 @@ public static class EnumerableExtension
 
     private static IEnumerable<T> RemoveDuplicatesByKeyIterator<T, TKey>(IEnumerable<T> source, Func<T, TKey> keySelector, int capacity)
     {
-        var seenKeys = capacity > 0 ? new HashSet<TKey>(capacity) : new HashSet<TKey>();
+        HashSet<TKey> seenKeys = capacity > 0 ? new HashSet<TKey>(capacity) : new HashSet<TKey>();
 
         foreach (T element in source)
         {
@@ -206,7 +206,7 @@ public static class EnumerableExtension
         if (count is 0 or 1)
             return false;
 
-        var set = count > 1 ? new HashSet<T>(count) : new HashSet<T>();
+        HashSet<T> set = count > 1 ? new HashSet<T>(count) : new HashSet<T>();
 
         foreach (T item in enumerable)
         {
@@ -287,6 +287,7 @@ public static class EnumerableExtension
     /// Computes a hash code for an IEnumerable that incorporates the hash codes of all elements
     /// and optionally the runtime identity of the collection instance.
     /// </summary>
+    [Pure]
     public static int GetAggregateHashCode<T>(this IEnumerable<T>? enumerable, bool includeIdentity = true)
     {
         if (enumerable is null)
@@ -344,7 +345,7 @@ public static class EnumerableExtension
     /// </summary>
     [Pure]
     [return: NotNullIfNotNull("enumerable")]
-    public static List<T>? ToFlattenedFromRecursive<T>(this IEnumerable<T>? enumerable, Expression<Func<T, IEnumerable<T>?>> childCollection)
+    public static List<T>? ToFlattenedFromRecursiveExpr<T>(this IEnumerable<T>? enumerable, Expression<Func<T, IEnumerable<T>?>> childCollection)
     {
         if (enumerable is null)
             return null;
@@ -356,6 +357,7 @@ public static class EnumerableExtension
         return enumerable.ToFlattenedFromRecursive(selector);
     }
 
+    [Pure]
     public static async IAsyncEnumerable<T> WhereAsync<T>(this IEnumerable<T> source, Func<T, CancellationToken, Task<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -386,6 +388,7 @@ public static class EnumerableExtension
         }
     }
 
+    [Pure]
     public static async IAsyncEnumerable<T> WhereAsync<T>(this IEnumerable<T> source, Func<T, CancellationToken, ValueTask<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -416,6 +419,7 @@ public static class EnumerableExtension
         }
     }
 
+    [Pure]
     public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(this IEnumerable<T> source, Func<T, CancellationToken, Task<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -432,6 +436,7 @@ public static class EnumerableExtension
         }
     }
 
+    [Pure]
     public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(this IEnumerable<T> source, Func<T, CancellationToken, ValueTask<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
