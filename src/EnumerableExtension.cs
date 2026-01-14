@@ -25,14 +25,26 @@ public static class EnumerableExtension
     /// </summary>
     [Pure]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this IEnumerable<T>? enumerable) => enumerable is null || enumerable.Empty();
+    public static bool IsNullOrEmpty<T>(
+        [NotNullWhen(false)] this IEnumerable<T>? enumerable)
+    {
+        if (enumerable is null)
+            return true;
+
+        if (enumerable.TryGetNonEnumeratedCount(out int count))
+            return count == 0;
+
+        using IEnumerator<T> e = enumerable.GetEnumerator();
+        return !e.MoveNext();
+    }
 
     /// <summary>
     /// Shorthand for <see cref="IsNullOrEmpty{T}"/> == false.
     /// </summary>
     [Pure]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Populated<T>([NotNullWhen(true)] this IEnumerable<T>? enumerable) => enumerable is not null && !enumerable.Empty();
+    public static bool Populated<T>([NotNullWhen(true)] this IEnumerable<T>? enumerable)
+        => !enumerable.IsNullOrEmpty();
 
     /// <summary>
     /// Determines whether the collection is empty. Assumes collection is non-null.
@@ -42,14 +54,9 @@ public static class EnumerableExtension
     {
         ArgumentNullException.ThrowIfNull(enumerable);
 
-        // Fast paths
-        if (enumerable is ICollection<T> c1)
-            return c1.Count == 0;
+        if (enumerable.TryGetNonEnumeratedCount(out int count))
+            return count == 0;
 
-        if (enumerable is IReadOnlyCollection<T> c2)
-            return c2.Count == 0;
-
-        // Enumerate minimally
         using IEnumerator<T> e = enumerable.GetEnumerator();
         return !e.MoveNext();
     }
@@ -57,12 +64,13 @@ public static class EnumerableExtension
     /// <summary>
     /// Removes duplicate elements from the specified sequence, preserving the first occurrence order.
     /// </summary>
-    [Pure]
     public static IEnumerable<T> RemoveDuplicates<T>(this IEnumerable<T> enumerable)
     {
         ArgumentNullException.ThrowIfNull(enumerable);
 
-        int capacity = enumerable is ICollection<T> c ? c.Count : enumerable is IReadOnlyCollection<T> rc ? rc.Count : 0;
+        int capacity = enumerable.TryGetNonEnumeratedCount(out int count) ? count : 0;
+        if (capacity <= 1)
+            return enumerable;
 
         return RemoveDuplicatesIterator(enumerable, capacity);
     }
@@ -83,12 +91,16 @@ public static class EnumerableExtension
     /// Preserves the first occurrence order.
     /// </summary>
     [Pure]
-    public static IEnumerable<T> RemoveDuplicates<T, TKey>(this IEnumerable<T> source, Func<T, TKey> keySelector)
+    public static IEnumerable<T> RemoveDuplicates<T, TKey>(
+        this IEnumerable<T> source,
+        Func<T, TKey> keySelector)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(keySelector);
 
-        int capacity = source is ICollection<T> c ? c.Count : source is IReadOnlyCollection<T> rc ? rc.Count : 0;
+        int capacity = source.TryGetNonEnumeratedCount(out int count) ? count : 0;
+        if (capacity <= 1)
+            return source;
 
         return RemoveDuplicatesByKeyIterator(source, keySelector, capacity);
     }
@@ -157,6 +169,17 @@ public static class EnumerableExtension
             return true;
         }
 
+        if (enumerable is IReadOnlyList<T> roList)
+        {
+            int count = roList.Count;
+
+            if ((uint)count == 0)
+                return false;
+
+            value = roList[RandomUtil.Next(0, count)];
+            return true;
+        }
+
         // Count-known but not indexable: pick a target index then walk once
         if (enumerable is ICollection<T> collection)
         {
@@ -167,7 +190,7 @@ public static class EnumerableExtension
             int target = RandomUtil.Next(0, count);
 
             var i = 0;
-            foreach (T item in enumerable)
+            foreach (T item in collection)
             {
                 if (i++ == target)
                 {
@@ -201,12 +224,12 @@ public static class EnumerableExtension
         if (enumerable is null)
             return false;
 
-        int count = enumerable is ICollection<T> c ? c.Count : enumerable is IReadOnlyCollection<T> rc ? rc.Count : -1;
+        int count = enumerable.TryGetNonEnumeratedCount(out int c) ? c : -1;
 
         if (count is 0 or 1)
             return false;
 
-        HashSet<T> set = count > 1 ? new HashSet<T>(count) : new HashSet<T>();
+        var set = count > 1 ? new HashSet<T>(count) : new HashSet<T>();
 
         foreach (T item in enumerable)
         {
@@ -241,20 +264,38 @@ public static class EnumerableExtension
     /// </summary>
     [Pure]
     [return: NotNullIfNotNull("source")]
-    public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T>? source)
+    public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T?>? source) where T : class
     {
         if (source is null)
             return null;
 
-        return RemoveNullsInternal(source);
+        return RemoveNullsRefInternal(source);
     }
 
-    private static IEnumerable<T> RemoveNullsInternal<T>(IEnumerable<T> source)
+    private static IEnumerable<T> RemoveNullsRefInternal<T>(IEnumerable<T?> source) where T : class
     {
-        foreach (T item in source)
+        foreach (T? item in source)
         {
             if (item is not null)
                 yield return item;
+        }
+    }
+    [Pure]
+    [return: NotNullIfNotNull("source")]
+    public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T?>? source) where T : struct
+    {
+        if (source is null)
+            return null;
+
+        return RemoveNullsNullableStructInternal(source);
+    }
+
+    private static IEnumerable<T> RemoveNullsNullableStructInternal<T>(IEnumerable<T?> source) where T : struct
+    {
+        foreach (T? item in source)
+        {
+            if (item.HasValue)
+                yield return item.GetValueOrDefault();
         }
     }
 
@@ -270,17 +311,8 @@ public static class EnumerableExtension
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetNonEnumeratedCount<T>(this IEnumerable<T> enumerable)
     {
-        // Linq.. but this isn't slow nor allocates
-        if (enumerable.TryGetNonEnumeratedCount(out int count))
-            return count;
-
-        if (enumerable is ICollection<T> c)
-            return c.Count;
-
-        if (enumerable is IReadOnlyCollection<T> roc)
-            return roc.Count;
-
-        return 0;
+        ArgumentNullException.ThrowIfNull(enumerable);
+        return enumerable.TryGetNonEnumeratedCount(out int count) ? count : 0;
     }
 
     /// <summary>
@@ -319,7 +351,7 @@ public static class EnumerableExtension
         int estimatedCapacity = enumerable is ICollection<T> c ? c.Count : enumerable is IReadOnlyCollection<T> rc ? rc.Count : 16;
 
         var result = new List<T>(estimatedCapacity);
-        var queue = new Queue<T>();
+        var queue = new Queue<T>(estimatedCapacity);
 
         foreach (T item in enumerable)
             queue.Enqueue(item);
@@ -358,7 +390,9 @@ public static class EnumerableExtension
     }
 
     [Pure]
-    public static async IAsyncEnumerable<T> WhereAsync<T>(this IEnumerable<T> source, Func<T, CancellationToken, Task<bool>> filter,
+    public static async IAsyncEnumerable<T> WhereAsync<T>(
+        this IEnumerable<T> source,
+        Func<T, CancellationToken, Task<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -375,8 +409,10 @@ public static class EnumerableExtension
             bool include;
             try
             {
-                include = await filter(item, cancellationToken)
-                    .NoSync();
+                Task<bool> task = filter(item, cancellationToken);
+                include = task.IsCompletedSuccessfully
+                    ? task.Result
+                    : await task.NoSync();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -388,8 +424,9 @@ public static class EnumerableExtension
         }
     }
 
-    [Pure]
-    public static async IAsyncEnumerable<T> WhereAsync<T>(this IEnumerable<T> source, Func<T, CancellationToken, ValueTask<bool>> filter,
+    public static async IAsyncEnumerable<T> WhereAsync<T>(
+        this IEnumerable<T> source,
+        Func<T, CancellationToken, ValueTask<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -406,8 +443,10 @@ public static class EnumerableExtension
             bool include;
             try
             {
-                include = await filter(item, cancellationToken)
-                    .NoSync();
+                ValueTask<bool> task = filter(item, cancellationToken);
+                include = task.IsCompletedSuccessfully
+                    ? task.Result
+                    : await task.NoSync();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -420,7 +459,9 @@ public static class EnumerableExtension
     }
 
     [Pure]
-    public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(this IEnumerable<T> source, Func<T, CancellationToken, Task<bool>> filter,
+    public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(
+        this IEnumerable<T> source,
+        Func<T, CancellationToken, Task<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -430,14 +471,20 @@ public static class EnumerableExtension
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (await filter(item, cancellationToken)
-                    .NoSync())
+            Task<bool> task = filter(item, cancellationToken);
+            bool include = task.IsCompletedSuccessfully
+                ? task.Result
+                : await task.NoSync();
+
+            if (include)
                 yield return item;
         }
     }
 
     [Pure]
-    public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(this IEnumerable<T> source, Func<T, CancellationToken, ValueTask<bool>> filter,
+    public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(
+        this IEnumerable<T> source,
+        Func<T, CancellationToken, ValueTask<bool>> filter,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -447,8 +494,12 @@ public static class EnumerableExtension
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (await filter(item, cancellationToken)
-                    .NoSync())
+            ValueTask<bool> task = filter(item, cancellationToken);
+            bool include = task.IsCompletedSuccessfully
+                ? task.Result
+                : await task.NoSync();
+
+            if (include)
                 yield return item;
         }
     }
