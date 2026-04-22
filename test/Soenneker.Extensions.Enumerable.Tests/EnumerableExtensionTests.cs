@@ -1,17 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using AwesomeAssertions;
 using Soenneker.Dtos.IdNamePair;
-using Xunit;
 
 namespace Soenneker.Extensions.Enumerable.Tests;
 
 public class EnumerableExtensionTests 
 {
-    [Fact]
+    [Test]
     public void RemoveDuplicates_should_remove_duplicates()
     {
         var test = new List<string> {"a", "a", "b"};
@@ -20,7 +19,7 @@ public class EnumerableExtensionTests
         dupesRemoved.Count().Should().Be(2);
     }
 
-    [Fact]
+    [Test]
     public void Contains_ShouldReturnTrue_WhenKeyExists()
     {
         // Arrange
@@ -38,7 +37,7 @@ public class EnumerableExtensionTests
         result.Should().BeTrue();
     }
 
-    [Fact]
+    [Test]
     public void RemoveDuplicates_ShouldRemoveDuplicatesBasedOnId()
     {
         // Arrange
@@ -60,7 +59,7 @@ public class EnumerableExtensionTests
         distinctPeople.Should().Contain(p => p.Id == "3" && p.Name == "Charlie");
     }
 
-    [Fact]
+    [Test]
     public void GetRandom_should_retrieve_value()
     {
         var test = new[] { "a", "b" };
@@ -69,7 +68,7 @@ public class EnumerableExtensionTests
         value.Should().NotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void RemoveNulls_should_remove_nulls_without_nulls()
     {
         var test = new[] { "a", "b" };
@@ -78,7 +77,7 @@ public class EnumerableExtensionTests
         value.Count().Should().Be(2);
     }
 
-    [Fact]
+    [Test]
     public void RemoveNulls_should_remove_nulls()
     {
         var test = new[] { "a", null, "b" };
@@ -87,7 +86,7 @@ public class EnumerableExtensionTests
         value.Count().Should().Be(2);
     }
 
-    [Fact]
+    [Test]
     public async System.Threading.Tasks.Task WhereAsync_Should_FilterItemsBasedOnPredicate()
     {
         var source = new List<int> { 1, 2, 3, 4, 5 };
@@ -102,7 +101,7 @@ public class EnumerableExtensionTests
         result.Should().BeEquivalentTo(new List<int> { 2, 4 });
     }
 
-    [Fact]
+    [Test]
     public async System.Threading.Tasks.Task WhereAsync_Should_StopFiltering_WhenCancellationIsRequested()
     {
         var source = new List<int> { 1, 2, 3, 4, 5 };
