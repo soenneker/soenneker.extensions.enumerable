@@ -280,6 +280,12 @@ public static class EnumerableExtension
                 yield return item;
         }
     }
+    /// <summary>
+    /// Removes nulls.
+    /// </summary>
+    /// <typeparam name="T">The T type.</typeparam>
+    /// <param name="source">The source.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     [return: NotNullIfNotNull("source")]
     public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T?>? source) where T : struct
@@ -389,6 +395,14 @@ public static class EnumerableExtension
         return enumerable.ToFlattenedFromRecursive(selector);
     }
 
+    /// <summary>
+    /// Executes the where async operation.
+    /// </summary>
+    /// <typeparam name="T">The T type.</typeparam>
+    /// <param name="source">The source.</param>
+    /// <param name="filter">The filter.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     public static async IAsyncEnumerable<T> WhereAsync<T>(
         this IEnumerable<T> source,
@@ -424,6 +438,14 @@ public static class EnumerableExtension
         }
     }
 
+    /// <summary>
+    /// Executes the where async operation.
+    /// </summary>
+    /// <typeparam name="T">The T type.</typeparam>
+    /// <param name="source">The source.</param>
+    /// <param name="filter">The filter.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result of the operation.</returns>
     public static async IAsyncEnumerable<T> WhereAsync<T>(
         this IEnumerable<T> source,
         Func<T, CancellationToken, ValueTask<bool>> filter,
@@ -458,6 +480,14 @@ public static class EnumerableExtension
         }
     }
 
+    /// <summary>
+    /// Executes the where async or throw operation.
+    /// </summary>
+    /// <typeparam name="T">The T type.</typeparam>
+    /// <param name="source">The source.</param>
+    /// <param name="filter">The filter.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(
         this IEnumerable<T> source,
@@ -481,6 +511,14 @@ public static class EnumerableExtension
         }
     }
 
+    /// <summary>
+    /// Executes the where async or throw operation.
+    /// </summary>
+    /// <typeparam name="T">The T type.</typeparam>
+    /// <param name="source">The source.</param>
+    /// <param name="filter">The filter.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result of the operation.</returns>
     [Pure]
     public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(
         this IEnumerable<T> source,
