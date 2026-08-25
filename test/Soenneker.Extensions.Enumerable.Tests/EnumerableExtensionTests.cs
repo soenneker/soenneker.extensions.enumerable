@@ -20,6 +20,32 @@ public class EnumerableExtensionTests
     }
 
     [Test]
+    public void RemoveDuplicates_should_enumerate_unknown_count_sequences()
+    {
+        IEnumerable<string> Source()
+        {
+            yield return "a";
+            yield return "a";
+            yield return "b";
+        }
+
+        Source().RemoveDuplicates().Should().Equal("a", "b");
+    }
+
+    [Test]
+    public void RemoveDuplicates_by_key_should_enumerate_unknown_count_sequences()
+    {
+        IEnumerable<IdNamePair> Source()
+        {
+            yield return new IdNamePair { Id = "1", Name = "first" };
+            yield return new IdNamePair { Id = "1", Name = "duplicate" };
+            yield return new IdNamePair { Id = "2", Name = "second" };
+        }
+
+        Source().RemoveDuplicates(pair => pair.Id).Select(pair => pair.Id).Should().Equal("1", "2");
+    }
+
+    [Test]
     public void Contains_ShouldReturnTrue_WhenKeyExists()
     {
         // Arrange

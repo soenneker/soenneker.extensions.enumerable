@@ -68,10 +68,11 @@ public static class EnumerableExtension
     {
         ArgumentNullException.ThrowIfNull(enumerable);
 
-        int capacity = enumerable.TryGetNonEnumeratedCount(out int count) ? count : 0;
-        if (capacity <= 1)
+        bool countKnown = enumerable.TryGetNonEnumeratedCount(out int count);
+        if (countKnown && count <= 1)
             return enumerable;
 
+        int capacity = countKnown ? count : 0;
         return RemoveDuplicatesIterator(enumerable, capacity);
     }
 
@@ -98,10 +99,11 @@ public static class EnumerableExtension
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(keySelector);
 
-        int capacity = source.TryGetNonEnumeratedCount(out int count) ? count : 0;
-        if (capacity <= 1)
+        bool countKnown = source.TryGetNonEnumeratedCount(out int count);
+        if (countKnown && count <= 1)
             return source;
 
+        int capacity = countKnown ? count : 0;
         return RemoveDuplicatesByKeyIterator(source, keySelector, capacity);
     }
 
@@ -249,7 +251,39 @@ public static class EnumerableExtension
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(predicate);
 
-        // Avoid the ICollection split: foreach already avoids enumerator allocations for arrays/lists
+        if (source is T[] array)
+        {
+            for (var i = 0; i < array.Length; i++)
+            {
+                if (predicate(array[i]))
+                    return true;
+            }
+
+            return false;
+        }
+
+        if (source is List<T> list)
+        {
+            for (var i = 0; i < list.Count; i++)
+            {
+                if (predicate(list[i]))
+                    return true;
+            }
+
+            return false;
+        }
+
+        if (source is IReadOnlyList<T> readOnlyList)
+        {
+            for (var i = 0; i < readOnlyList.Count; i++)
+            {
+                if (predicate(readOnlyList[i]))
+                    return true;
+            }
+
+            return false;
+        }
+
         foreach (T item in source)
         {
             if (predicate(item))
