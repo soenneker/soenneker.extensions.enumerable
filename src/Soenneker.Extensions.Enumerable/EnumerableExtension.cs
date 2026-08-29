@@ -23,6 +23,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Determines whether the collection is null or contains no elements.
     /// </summary>
+    /// <returns><see langword="true"/> when the collection is null or contains no elements; otherwise <see langword="false"/>.</returns>
     [Pure]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNullOrEmpty<T>(
@@ -39,8 +40,9 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Shorthand for <see cref="IsNullOrEmpty{T}"/> == false.
+    /// Determines whether the sequence is non-null and contains at least one element.
     /// </summary>
+    /// <returns><see langword="true"/> when the sequence contains an element; otherwise <see langword="false"/>.</returns>
     [Pure]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Populated<T>([NotNullWhen(true)] this IEnumerable<T>? enumerable)
@@ -49,6 +51,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Determines whether the collection is empty. Assumes collection is non-null.
     /// </summary>
+    /// <returns><see langword="true"/> when the collection is empty. Assumes collection is non-null; otherwise <see langword="false"/>.</returns>
     [Pure]
     public static bool Empty<T>(this IEnumerable<T> enumerable)
     {
@@ -64,6 +67,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Removes duplicate elements from the specified sequence, preserving the first occurrence order.
     /// </summary>
+    /// <returns>Removes duplicate elements from the specified sequence, preserving the first occurrence order.</returns>
     public static IEnumerable<T> RemoveDuplicates<T>(this IEnumerable<T> enumerable)
     {
         ArgumentNullException.ThrowIfNull(enumerable);
@@ -91,6 +95,7 @@ public static class EnumerableExtension
     /// Removes duplicate elements from the specified sequence based on a specified key.
     /// Preserves the first occurrence order.
     /// </summary>
+    /// <returns>Removes duplicate elements from the specified sequence based on a specified key. Preserves the first occurrence order.</returns>
     [Pure]
     public static IEnumerable<T> RemoveDuplicates<T, TKey>(
         this IEnumerable<T> source,
@@ -122,12 +127,14 @@ public static class EnumerableExtension
     /// <summary>
     /// Preferably you should use the List extension if you have a list. This will not throw an exception due to null or empty.
     /// </summary>
+    /// <returns>Preferably you should use the List extension if you have a list. This will not throw an exception due to null or empty.</returns>
     [Pure]
     public static T GetRandom<T>(this IEnumerable<T>? enumerable) => TryGetRandom(enumerable, out T value) ? value : default!;
 
     /// <summary>
     /// Throws an exception if the enumerable is null or empty.
     /// </summary>
+    /// <returns>Throws an exception if the enumerable is null or empty.</returns>
     [Pure]
     public static T GetRandomStrict<T>(this IEnumerable<T> enumerable)
     {
@@ -220,6 +227,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Determines whether the specified sequence contains any duplicate elements.
     /// </summary>
+    /// <returns><see langword="true"/> when the specified sequence contains any duplicate elements; otherwise <see langword="false"/>.</returns>
     [Pure]
     public static bool ContainsDuplicates<T>(this IEnumerable<T>? enumerable)
     {
@@ -245,6 +253,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Determines whether the sequence contains any elements that satisfy the specified predicate.
     /// </summary>
+    /// <returns><see langword="true"/> when the sequence contains any elements that satisfy the specified predicate; otherwise <see langword="false"/>.</returns>
     [Pure]
     public static bool Contains<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
@@ -296,6 +305,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Removes null elements from the specified sequence of items. If the source sequence is null, it returns null.
     /// </summary>
+    /// <returns>Removes null elements from the specified sequence of items. If the source sequence is null, it returns null.</returns>
     [Pure]
     [return: NotNullIfNotNull("source")]
     public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T?>? source) where T : class
@@ -315,11 +325,11 @@ public static class EnumerableExtension
         }
     }
     /// <summary>
-    /// Removes nulls.
+    /// Filters null elements from a nullable sequence and preserves a null source as null.
     /// </summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="source">The source.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <typeparam name="T">The sequence element or result type.</typeparam>
+    /// <param name="source">The source sequence or query.</param>
+    /// <returns>A filtered lazy sequence, or null when the source is null.</returns>
     [Pure]
     [return: NotNullIfNotNull("source")]
     public static IEnumerable<T>? RemoveNulls<T>(this IEnumerable<T?>? source) where T : struct
@@ -343,7 +353,7 @@ public static class EnumerableExtension
     /// Attempts to retrieve the count of elements in the specified enumerable without fully enumerating it. This is NOT an actual count, it's a preallocation hint.
     /// </summary>
     /// <remarks>This method uses efficient mechanisms to obtain the count, such as checking for
-    /// implementations of ICollection<T>, IReadOnlyCollection<T>, or TryGetNonEnumeratedCount. If the count cannot be
+    /// implementations of <c>ICollection&lt;T&gt;</c>, <c>IReadOnlyCollection&lt;T&gt;</c>, or <c>TryGetNonEnumeratedCount</c>. If the count cannot be
     /// determined without enumeration, the method returns 0 and does not enumerate the collection.</remarks>
     /// <typeparam name="T">The type of elements in the enumerable.</typeparam>
     /// <param name="enumerable">The enumerable collection whose element count is to be determined. Cannot be null.</param>
@@ -359,6 +369,7 @@ public static class EnumerableExtension
     /// Computes a hash code for an IEnumerable that incorporates the hash codes of all elements
     /// and optionally the runtime identity of the collection instance.
     /// </summary>
+    /// <returns>Computes a hash code for an IEnumerable that incorporates the hash codes of all elements and optionally the runtime identity of the collection instance.</returns>
     [Pure]
     public static int GetAggregateHashCode<T>(this IEnumerable<T>? enumerable, bool includeIdentity = true)
     {
@@ -379,6 +390,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Flattens and returns a collection of recursive children. Preserves underlying references even though it's a new list.
     /// </summary>
+    /// <returns>Flattens and returns a collection of recursive children. Preserves underlying references even though it's a new list.</returns>
     [Pure]
     [return: NotNullIfNotNull("enumerable")]
     public static List<T>? ToFlattenedFromRecursive<T>(this IEnumerable<T>? enumerable, Func<T, IEnumerable<T>?> childSelector)
@@ -415,6 +427,7 @@ public static class EnumerableExtension
     /// <summary>
     /// Expression-based overload; compiles a delegate once per call (no reflection per item).
     /// </summary>
+    /// <returns>Expression-based overload; compiles a delegate once per call (no reflection per item).</returns>
     [Pure]
     [return: NotNullIfNotNull("enumerable")]
     public static List<T>? ToFlattenedFromRecursiveExpr<T>(this IEnumerable<T>? enumerable, Expression<Func<T, IEnumerable<T>?>> childCollection)
@@ -430,13 +443,13 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Executes the where async operation.
+    /// Lazily yields the elements for which the asynchronous predicate returns true.
     /// </summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="source">The source.</param>
-    /// <param name="filter">The filter.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <typeparam name="T">The sequence element or result type.</typeparam>
+    /// <param name="source">The source sequence or query.</param>
+    /// <param name="filter">The asynchronous predicate evaluated for each element.</param>
+    /// <param name="cancellationToken">Signals that the asynchronous operation should stop.</param>
+    /// <returns>An asynchronous sequence containing accepted elements.</returns>
     [Pure]
     public static async IAsyncEnumerable<T> WhereAsync<T>(
         this IEnumerable<T> source,
@@ -473,13 +486,13 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Executes the where async operation.
+    /// Lazily yields the elements for which the asynchronous predicate returns true.
     /// </summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="source">The source.</param>
-    /// <param name="filter">The filter.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <typeparam name="T">The sequence element or result type.</typeparam>
+    /// <param name="source">The source sequence or query.</param>
+    /// <param name="filter">The asynchronous predicate evaluated for each element.</param>
+    /// <param name="cancellationToken">Signals that the asynchronous operation should stop.</param>
+    /// <returns>An asynchronous sequence containing accepted elements.</returns>
     public static async IAsyncEnumerable<T> WhereAsync<T>(
         this IEnumerable<T> source,
         Func<T, CancellationToken, ValueTask<bool>> filter,
@@ -515,13 +528,13 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Executes the where async or throw operation.
+    /// Lazily yields elements accepted by the asynchronous predicate and propagates predicate failures to the consumer.
     /// </summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="source">The source.</param>
-    /// <param name="filter">The filter.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <typeparam name="T">The sequence element or result type.</typeparam>
+    /// <param name="source">The source sequence or query.</param>
+    /// <param name="filter">The asynchronous predicate evaluated for each element.</param>
+    /// <param name="cancellationToken">Signals that the asynchronous operation should stop.</param>
+    /// <returns>An asynchronous sequence containing accepted elements.</returns>
     [Pure]
     public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(
         this IEnumerable<T> source,
@@ -546,13 +559,13 @@ public static class EnumerableExtension
     }
 
     /// <summary>
-    /// Executes the where async or throw operation.
+    /// Lazily yields elements accepted by the asynchronous predicate and propagates predicate failures to the consumer.
     /// </summary>
-    /// <typeparam name="T">The T type.</typeparam>
-    /// <param name="source">The source.</param>
-    /// <param name="filter">The filter.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <typeparam name="T">The sequence element or result type.</typeparam>
+    /// <param name="source">The source sequence or query.</param>
+    /// <param name="filter">The asynchronous predicate evaluated for each element.</param>
+    /// <param name="cancellationToken">Signals that the asynchronous operation should stop.</param>
+    /// <returns>An asynchronous sequence containing accepted elements.</returns>
     [Pure]
     public static async IAsyncEnumerable<T> WhereAsyncOrThrow<T>(
         this IEnumerable<T> source,
