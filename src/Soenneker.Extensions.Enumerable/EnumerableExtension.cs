@@ -403,22 +403,21 @@ public static class EnumerableExtension
         int estimatedCapacity = enumerable is ICollection<T> c ? c.Count : enumerable is IReadOnlyCollection<T> rc ? rc.Count : 16;
 
         var result = new List<T>(estimatedCapacity);
-        var queue = new Queue<T>(estimatedCapacity);
 
         foreach (T item in enumerable)
-            queue.Enqueue(item);
+            result.Add(item);
 
-        while (queue.Count > 0)
+        // The accumulated result also holds the pending breadth-first traversal.
+        for (var index = 0; index < result.Count; index++)
         {
-            T current = queue.Dequeue();
-            result.Add(current);
+            T current = result[index];
 
             IEnumerable<T>? children = childSelector(current);
             if (children is null)
                 continue;
 
             foreach (T child in children)
-                queue.Enqueue(child);
+                result.Add(child);
         }
 
         return result;
