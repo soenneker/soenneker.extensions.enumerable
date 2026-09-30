@@ -113,7 +113,7 @@ public class EnumerableExtensionTests
     }
 
     [Test]
-    public async System.Threading.Tasks.Task WhereAsync_Should_FilterItemsBasedOnPredicate()
+    public async System.Threading.Tasks.ValueTask WhereAsync_Should_FilterItemsBasedOnPredicate()
     {
         var source = new List<int> { 1, 2, 3, 4, 5 };
         Func<int, CancellationToken, Task<bool>> filter = async (item, token) =>
@@ -128,7 +128,7 @@ public class EnumerableExtensionTests
     }
 
     [Test]
-    public async System.Threading.Tasks.Task WhereAsync_Should_StopFiltering_WhenCancellationIsRequested()
+    public async System.Threading.Tasks.ValueTask WhereAsync_Should_StopFiltering_WhenCancellationIsRequested()
     {
         var source = new List<int> { 1, 2, 3, 4, 5 };
         var cts = new CancellationTokenSource();
