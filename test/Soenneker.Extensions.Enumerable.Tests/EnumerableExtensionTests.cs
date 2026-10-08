@@ -113,7 +113,7 @@ public class EnumerableExtensionTests
     }
 
     [Test]
-    public async System.Threading.Tasks.ValueTask WhereAsync_Should_FilterItemsBasedOnPredicate()
+    public async System.Threading.Tasks.ValueTask WhereAsync_Should_FilterItemsBasedOnPredicate(CancellationToken cancellationToken)
     {
         var source = new List<int> { 1, 2, 3, 4, 5 };
         Func<int, CancellationToken, Task<bool>> filter = async (item, token) =>
@@ -122,13 +122,13 @@ public class EnumerableExtensionTests
             return item % 2 == 0;
         };
 
-        List<int> result = await source.WhereAsync(filter).ToListAsync();
+        List<int> result = await source.WhereAsync(filter, cancellationToken: cancellationToken).ToListAsync(cancellationToken: cancellationToken);
 
         result.Should().BeEquivalentTo(new List<int> { 2, 4 });
     }
 
     [Test]
-    public async System.Threading.Tasks.ValueTask WhereAsync_Should_StopFiltering_WhenCancellationIsRequested()
+    public async System.Threading.Tasks.ValueTask WhereAsync_Should_StopFiltering_WhenCancellationIsRequested(CancellationToken cancellationToken)
     {
         var source = new List<int> { 1, 2, 3, 4, 5 };
         var cts = new CancellationTokenSource();
@@ -142,7 +142,7 @@ public class EnumerableExtensionTests
             return true;
         };
 
-        List<int> result = await source.WhereAsync(filter, cts.Token).ToListAsync();
+        List<int> result = await source.WhereAsync(filter, cts.Token).ToListAsync(cancellationToken: cancellationToken);
 
         result.Should().BeEquivalentTo(new List<int> { 1, 2, 3 });
     }
