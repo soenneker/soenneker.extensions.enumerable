@@ -43,8 +43,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Extensions.Task" Version="4.0.134" />
-        <PackageReference Include="Soenneker.Extensions.ValueTask" Version="4.0.127" />
-        <PackageReference Include="Soenneker.Utils.Random" Version="4.0.138" />
+        <PackageReference Include="Soenneker.Extensions.Task" Version="4.0.139" />
+        <PackageReference Include="Soenneker.Extensions.ValueTask" Version="4.0.132" />
+        <PackageReference Include="Soenneker.Utils.Random" Version="4.0.144" />
     </ItemGroup>
 </Project>
