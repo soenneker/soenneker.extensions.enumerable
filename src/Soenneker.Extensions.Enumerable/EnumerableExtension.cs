@@ -76,19 +76,7 @@ public static class EnumerableExtension
         if (countKnown && count <= 1)
             return enumerable;
 
-        int capacity = countKnown ? count : 0;
-        return RemoveDuplicatesIterator(enumerable, capacity);
-    }
-
-    private static IEnumerable<T> RemoveDuplicatesIterator<T>(IEnumerable<T> source, int capacity)
-    {
-        HashSet<T> seen = capacity > 0 ? new HashSet<T>(capacity) : new HashSet<T>();
-
-        foreach (T item in source)
-        {
-            if (seen.Add(item))
-                yield return item;
-        }
+        return enumerable.Distinct();
     }
 
     /// <summary>
@@ -108,20 +96,7 @@ public static class EnumerableExtension
         if (countKnown && count <= 1)
             return source;
 
-        int capacity = countKnown ? count : 0;
-        return RemoveDuplicatesByKeyIterator(source, keySelector, capacity);
-    }
-
-    private static IEnumerable<T> RemoveDuplicatesByKeyIterator<T, TKey>(IEnumerable<T> source, Func<T, TKey> keySelector, int capacity)
-    {
-        HashSet<TKey> seenKeys = capacity > 0 ? new HashSet<TKey>(capacity) : new HashSet<TKey>();
-
-        foreach (T element in source)
-        {
-            TKey key = keySelector(element);
-            if (seenKeys.Add(key))
-                yield return element;
-        }
+        return source.DistinctBy(keySelector);
     }
 
     /// <summary>
