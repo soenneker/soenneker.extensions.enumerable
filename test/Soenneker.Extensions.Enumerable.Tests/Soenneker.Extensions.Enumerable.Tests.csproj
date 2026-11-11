@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
-        <PackageReference Include="Soenneker.Dtos.IdNamePair" Version="11.0.748" />
+        <PackageReference Include="Soenneker.Dtos.IdNamePair" Version="11.0.749" />
         <PackageReference Include="TUnit" Version="1.83.0" />
     </ItemGroup>
 
